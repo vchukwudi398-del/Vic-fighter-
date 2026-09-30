@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VIC FIGHTER 2 - BIG</title>
+
+<style>
+body{
+  margin:0;
+  background:#0d0d0d;
+  color:#fff;
+  font-family:Arial;
+  overflow:hidden;
+}
+
+canvas{
+  display:block;
+  margin:0 auto;
+  background:linear-gradient(#2a2a6a,#111);
+}
+
+#ui{
+  position:absolute;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:40px;
+  width:90%;
+  max-width:1000px;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.hp{
+  width:380px;
+  height:28px;
+  background:#333;
+  border:2px solid #fff;
+  transform:skew(-10deg);
+}
+
+.fill{
+  height:100%;
+  transition:width .2s;
+}
+
+#hp1{background:linear-gradient(90deg,#ff0000,#ff6a00)}
+#hp2{background:linear-gradient(90deg,#00aaff,#00ffcc)}
+
+b{font-size:20px}
+</style>
+</head>
+
+<body>
+
+<div id="ui">
+  <div>
+    <b>RED</b>
+    <div class="hp"><div id="hp1" class="fill" style="width:100%"></div></div>
+  </div>
+
+  <div style="font-size:28px">VS</div>
+
+  <div>
+    <b>BLUE</b>
+    <div class="hp"><div id="hp2" class="fill" style="width:100%"></div></div>
+  </div>
+</div>
+
+<canvas id="g" width="1000" height="550"></canvas>
+
+<script>const canvas=document.getElementById('g');
+const ctx=canvas.getContext('2d');
+
+let k={};
+addEventListener('keydown',e=>k[e.key.toLowerCase()]=true);
+addEventListener('keyup',e=>k[e.key.toLowerCase()]=false);
+
+class F{
+ constructor(x,col,left){
+  this.x=x;
+  this.y=400;
+  this.vy=0;
+  this.col=col;
+  this.left=left;
+  this.hp=100;
+  this.act='idle';
+  this.face= left?1:-1;
+  this.cd=0;
+ }
+
+ upd(en){
+  if(this.cd>0)this.cd--;
+
+  let mv = this.left
+    ? (k['a']?-7:k['d']?7:0)
+    : (k['arrowleft']?-7:k['arrowright']?7:0);
+
+  if(mv) this.face = mv>0?1:-1;
+
+  this.x+=mv;
+
+  if((this.left?k['w']:k['arrowup']) && this.y>=400){
+    this.vy=-16;
+    this.act='jump';
+  }
+
+  this.y+=this.vy;
+  this.vy+=0.9;
+
+  if(this.y>400){
+    this.y=400;
+    this.vy=0;
+  }
+
+  let punch=this.left?k['f']:k['k'];
+  let kick=this.left?k['g']:k['l'];
+
+  if(this.cd==0){
+   if(punch){
+     this.act='punch';
+     this.cd=18;
+     this.hit(en,90,12);
+   }
+   else if(kick){
+     this.act='kick';
+     this.cd=25;
+     this.hit(en,110,18);
+   }
+   else if(mv){
+     this.act='run';
+   } else {
+     this.act='idle';
+   }
+  }
+
+  this.x=Math.max(80,Math.min(920,this.x));
+ }
+
+ hit(en,r,d){
+  if(Math.abs(this.x-en.x)<r && Math.abs(this.y-en.y)<60){
+    en.hp-=d;
+    en.vy=-5;
+    en.x+=this.face*20;
+    flash=en;
+  }
+ }
+
+ draw(){
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(this.x,430,40,10,0,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle=this.col;
+
+  ctx.fillRect(this.x-25,this.y-90,50,70);
+  ctx.fillRect(this.x-35,this.y-90,18,45);
+
+  if(this.act=='punch')
+    ctx.fillRect(this.x+this.face*25,this.y-80,45,18);
+  else
+    ctx.fillRect(this.x+this.face*25,this.y-80,18,45);
+
+  ctx.fillRect(this.x-20,this.y-20,18,50);
+
+  if(this.act=='kick')
+    ctx.fillRect(this.x+this.face*15,this.y-20,65,18);
+  else
+    ctx.fillRect(this.x+5,this.y-20,18,50);
+
+  ctx.fillStyle='#ffdbac';
+  ctx.fillRect(this.x-18,this.y-115,36,32);
+
+  ctx.fillStyle='#000';
+  ctx.fillRect(this.x-10+this.face*5,this.y-105,5,5);
+  ctx.fillRect(this.x+5+this.face*5,this.y-105,5,5);
+ }
+}let p1=new F(250,'#ff1a1a',true);
+let p2=new F(750,'#1a8cff',false);
+let flash=null;
+
+function loop(){
+ ctx.clearRect(0,0,1000,550);
+
+ ctx.fillStyle='#1a1a2e';
+ ctx.fillRect(0,0,1000,350);
+
+ ctx.fillStyle='#222';
+ for(let i=0;i<10;i++){
+   ctx.fillRect(i*120,150,80,200);
+ }
+
+ p1.upd(p2);
+ p2.upd(p1);
+
+ p1.draw();
+ p2.draw();
+
+ if(flash){
+   ctx.fillStyle='rgba(255,255,0,0.5)';
+   ctx.fillRect(flash.x-30,flash.y-120,60,120);
+   flash=null;
+ }
+
+ hp1.style.width=p1.hp+'%';
+ hp2.style.width=p2.hp+'%';
+
+ if(p1.hp<=0||p2.hp<=0){
+  ctx.fillStyle='#fff';
+  ctx.font='bold 60px Arial';
+  ctx.fillText((p1.hp<=0?'BLUE':'RED')+' WINS!',300,200);
+  return;
+ }
+
+ requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
